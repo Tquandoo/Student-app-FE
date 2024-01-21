@@ -14,16 +14,35 @@ const Student = () => {
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [studentId, setStudentId] = useState(null)
+  const [totalPages, setTotalPages] = useState(0)
+  const [keyword, setKeyword] = useState(null)
+  const [filters, setFilters] = useState({
+    searchText: '',
+    sort: 'fullname',
+    order: 'asc',
+    page: 1,
+    limit: 10,
+    direction: 'next'
+  })
   useEffect(() => {
     setLoading(true)
     getAllStudent()
-  }, [selectedStudent, studentId])
+  }, [selectedStudent, studentId, filters])
   const getAllStudent =  async () => {
-      let studentListRes = await fetch(`${import.meta.env.VITE_API_URI}/student`)
+      let studentListRes = await fetch(`${import.meta.env.VITE_API_URI}/student?_page=${filters?.page}&_limit=${filters?.limit}&_sort=${filters.sort}&_order=${filters.order}&fullname_like=${filters.searchText}`)
       let data = await studentListRes.json()
       setStudentList(data)
       setLoading(false)
   }
+  useEffect(() => {
+    async function getTotalRows() {
+        let totalRowsRes = await fetch(`${import.meta.env.VITE_API_URI}/student?fullname_like=${filters.searchText}`)
+        let data = await totalRowsRes.json();
+        let totalPages = Math.ceil(Number(data.length) / Number(filters.limit))
+        setTotalPages(totalPages);
+    }
+    getTotalRows()
+  }, [filters.limit, filters.searchText])
   const handleRemoveStudent = (student) => {
     Swal.fire({
       title: "Are you sure to remove this student?",
@@ -50,27 +69,80 @@ const Student = () => {
     setShowModal(true)
     setStudentId(student?.id)
   }
+
+  const handleNextPage = () => {
+    setFilters({
+      ...filters,
+      page: Number(filters.page) + 1,
+      direction: 'next'
+    })
+    console.log(filters);
+  }
+  const handlePreviousPage = () => {
+    if(Number(filters.page) >1){
+      setFilters({
+        ...filters,
+        page: Number(filters.page) - 1,
+        direction: 'prev'
+      })
+    }
+  }
+  const handleChangePageSize = (e) => {
+    setFilters({
+      ...filters,
+      limit: Number(e.target.value)
+    })
+  }
+
+  const handleChangeField = (e) => {
+    setFilters({
+      ...filters,
+      sort: e.target.value
+    })
+  }
+  const handleChangeSort =(e) => {
+    setFilters({
+      ...filters,
+      order: e.target.value
+    })
+  }
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setFilters({
+        ...filters,
+        searchText: keyword
+    })
+}
   return (
    <>
    <div className="d-flex align-items-center justify-content-between my-2">
-                <form className="d-flex align-items-center w-50">
+                <form onSubmit={handleSearch} className="d-flex align-items-center w-50">
                     <input type="text"
                         className="form-control form-control-sm"
                         placeholder="search..."
+                        onInput={(e) => setKeyword(e.target.value)}
                     />
                     <FaSearch size={20} className="text-secondary" style={{ marginLeft: '-23px' }} />
                 </form>
                 <div className="d-flex align-items-center">
                     <div className="d-flex align-items-center me-2">
                         <span className="me-2">Field</span>
-                        <select className="form-select form-select-sm">
+                        <select 
+                          className="form-select form-select-sm"
+                          defaultValue={'fullname'}
+                          onChange={handleChangeField}
+                          >
                             <option value="fullname">Fullname</option>
                             <option value="email">Email</option>
                         </select>
                     </div>
                     <div className="d-flex align-items-center">
                         <span className="me-2">Sort</span>
-                        <select className="form-select form-select-sm">
+                        <select 
+                          className="form-select form-select-sm"
+                          defaultValue={'asc'}
+                          onChange={handleChangeSort}
+                          >
                             <option value="asc">Ascendent</option>
                             <option value="desc">Descendent</option>
                         </select>
@@ -133,16 +205,21 @@ const Student = () => {
           }
           <div className="d-flex align-items-center justify-content-between">
                 <ul className="pagination">
-                    <li className="page-item">
-                        <button className="page-link">Previous</button>
+                <li className={`page-item ${Number(filters.page) <= 1 ? 'disabled' : filters.direction === 'prev' ? 'active' : ''}`} >
+                        <button className="page-link" onClick={handlePreviousPage}>Previous</button>
                     </li>
                     <li className="page-item">
-                        <button className="page-link">Next</button>
+                    <button className={`page-link ${Number(filters.page) >= totalPages ? 'disabled' : filters.direction === 'next' ? 'active' : ''}`} onClick={handleNextPage}>Next</button>
                     </li>
                 </ul>
                 <div className="d-flex align-items-center">
                     <span style={{width: '150px'}}>Items per page</span>
-                    <select className="form-select form-select-sm" style={{width: '60px'}}>
+                    <select 
+                      className="form-select form-select-sm" 
+                      style={{width: '60px'}}
+                      defaultValue={10}
+                      onChange= { handleChangePageSize}
+                      >
                         <option value={10}>10</option>
                         <option value={30}>30</option>
                         <option value={50}>50</option>
