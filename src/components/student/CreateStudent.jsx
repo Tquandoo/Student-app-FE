@@ -4,6 +4,8 @@ import { toast } from 'react-toastify'
 import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { yupResolver } from "@hookform/resolvers/yup"
+import DepartmentService from "../../services/department-services";
+import StudentService from "../../services/student-services";
 
 const schema = yup.object({
   fullname: yup.string().required(),
@@ -20,9 +22,12 @@ const CreateStudent = () => {
 
   useEffect (() => {
     async function getDepartmentList() {
-      let departmentListRes = await fetch(`${import.meta.env.VITE_API_URI}/department`)
-      let data = await departmentListRes.json()
-      setDepartmentList(data)
+    //   let departmentListRes = await fetch(`${import.meta.env.VITE_API_URI}/department`)
+    //   let data = await departmentListRes.json()
+    //   setDepartmentList(data)
+
+    let departmentListRes = await DepartmentService.getDepartmentList()
+    setDepartmentList(departmentList)
     }
     getDepartmentList()
   },[])
@@ -39,18 +44,11 @@ const CreateStudent = () => {
     }
     try{
       setIsCreating(true)
-      let createStudentRes = await fetch(`${import.meta.env.VITE_API_URI}/student`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(values)
-    })
-      let result = await createStudentRes.json()
-      if(result){
-        reset()
-        toast.success('Student created succeed', { theme: 'light'})
-      }
+      let result = await StudentService.createStudent(values)
+      if (result) {
+          reset()
+          toast.success('Student created succeed', { theme: 'light' })
+    }
       setIsCreating(false)
     } catch (error) {
       toast.error('Something went wrong, please contact administrator')
